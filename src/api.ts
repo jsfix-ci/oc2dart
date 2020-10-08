@@ -6,6 +6,7 @@ import { concatAll, filter, map, takeUntil } from 'rxjs/operators';
 import * as os from 'os';
 import { mapToToken } from './parser';
 import { Token } from './token';
+import { transform as _transform } from './transformer';
 // @ts-ignore
 import * as stringify from 'json-stable-stringify-without-jsonify';
 // const RegForInterface = /^[\s#\t\/\{\}]/
@@ -121,4 +122,9 @@ export function convert(content: string) {
       })
       .join(os.EOL) + os.EOL
   );
+}
+
+export function transform(content:string):string{
+  const readable = content.split(os.EOL);
+  return readable.map(_transform).join(os.EOL) + os.EOL
 }
