@@ -124,7 +124,7 @@ export function convert(content: string) {
   );
 }
 
-export function transform(content:string):string{
+export function transform(content: string): string {
   const readable = content.split(os.EOL);
-  return readable.map(_transform).join(os.EOL) + os.EOL
+  return readable.map(_transform).join(os.EOL) + os.EOL;
 }
