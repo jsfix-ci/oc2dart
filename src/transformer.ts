@@ -114,17 +114,17 @@ function _replaceTypes(line: string): string {
 
 const BuiltinTypes = {
   '(?:\\b)int': `int`,
-  '(?:\\b)NSString\\s*\\*?': 'String',
+  '(?:\\b)NSString\\s*\\*?\\s*': 'String ',
   '(?:\\b)BOOL': 'bool',
   '(?:\\b)void': 'void',
   '(?:\\b)float': 'double',
-  '(?:\\b)NSMutableString\\s*\\*?': 'String',
+  '(?:\\b)NSMutableString\\s*\\*?\\s*': 'String ',
   '(?:\\b)id': 'dynamic',
-  '(?:\\b)NSNumber\\s*\\*?': 'num',
-  '(?:\\b)NSArray\\s*\\*?': `List<dynamic>`,
-  '(?:\\b)NSMutableArray\\s*\\*?': `List<dynamic>`,
-  '(?:\\b)NSDictionary\\s*\\*?': `Map`,
-  '(?:\\b)NSMutableDictionary\\s*\\*?': `Map`,
+  '(?:\\b)NSNumber\\s*\\*?\\s*': 'num ',
+  '(?:\\b)NSArray\\s*\\*?\\s*': `List<dynamic> `,
+  '(?:\\b)NSMutableArray\\s*\\*?\\s*': `List<dynamic> `,
+  '(?:\\b)NSDictionary\\s*\\*?\\s*': `Map `,
+  '(?:\\b)NSMutableDictionary\\s*\\*?\\s*': `Map `,
 };
 
 function replaceBuiltinTypes(line: string): string {
@@ -135,13 +135,13 @@ function replaceBuiltinTypes(line: string): string {
 }
 
 function dictionaryWithCapacity(line: string): string {
-  const r = /\[\s*NSMutableDictionary\s+dictionaryWithCapacity:(\d+)\s*\]/;
-  return line.replace(r, '{} // capacity:$1');
+  const r = /\[\s*NSMutableDictionary\s+dictionaryWithCapacity:(\d+)\s*\];?/;
+  return line.replace(r, '{}; // capacity:$1');
 }
 
 function arrayWithCapacity(line: string): string {
-  const r = /\[\s*NSMutableArray\s+arrayWithCapacity:(\d+)\s*\]/g;
-  return line.replace(r, '[] // capacity:$1');
+  const r = /\[\s*NSMutableArray\s+arrayWithCapacity:(\d+)\s*\];?/g;
+  return line.replace(r, '[]; // capacity:$1');
 }
 
 function array_addObject(line: string): string {
@@ -208,6 +208,8 @@ assert(
     "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
+console.log(transform(s4));
+
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
 assert(
   transform(s5) === `root['Store'] = Store.sharedStore().dictionaryValue();`
@@ -234,11 +236,11 @@ assert(
     `String documentDirectory = [path objectAtIndex:0];`
 );
 
-const s8 = `[NSMutableDictionary dictionaryWithCapacity:400]`;
-assert(dictionaryWithCapacity(s8) === `{} // capacity:400`);
+const s8 = `[NSMutableDictionary dictionaryWithCapacity:400];`;
+assert(dictionaryWithCapacity(s8) === `{}; // capacity:400`);
 
 const s9 = `[NSMutableArray arrayWithCapacity:4];`;
-assert(arrayWithCapacity(s9) === `[] // capacity:4;`);
+assert(arrayWithCapacity(s9) === `[]; // capacity:4`);
 
 const s10 = `[BFIndexArray addObject:info.hero.num];`;
 assert(array_addObject(s10) === `BFIndexArray.add(info.hero.num);`);
