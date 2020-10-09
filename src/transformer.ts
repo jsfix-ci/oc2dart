@@ -1,5 +1,4 @@
-// @ts-ignore
-import { assert } from "console";
+import {strict as assert} from 'assert';
 
 function intValue(line: string): string {
     return line.replace(".intValue", ".toInt()");
@@ -65,7 +64,7 @@ function setObject(line: string): string {
 
 // @ts-ignore
 function _methodCall(line: string): string {
-    const r = /\[\s*([^\]]+)\s([^\]]+)\s*\]/
+    const r = /\[\s*([^\]]+)\s+([^\]]+)\s*\]/
     let result = line;
     while (r.exec(result)) {
         result = result.replace(r, `$1.$2()`)
@@ -75,13 +74,13 @@ function _methodCall(line: string): string {
 
 function _simpleMethodCall(line: string): string {
     // obj.met
-    const r = /\[\s*([\w\.\(\)]+)\s([\w\.\(\)]+)\s*\]/
+    const r = /\[\s*([\w\.\(\)]+)\s+([\w\.\(\)]+)\s*\]/
     let result = line;
     // tslint:disable-next-line: no-conditional-assignment
-    while ( r.exec(result)) {
+    while (r.exec(result)) {
 
-            result = result.replace(r, `$1.$2()`)
-      
+        result = result.replace(r, `$1.$2()`)
+
 
     }
     return result;
@@ -97,22 +96,102 @@ function _callWithArgs(line: string): string {
 
         if (a.length === 4) {
             if (a[3]) {
-                const s3 = a[3].split(" ").join(",");
-                result = result.replace(r, `$1.$2(${s3})`).replace("(:", "(")
+                const s3A = a[3].split(" ")
+                for (let index = 0; index < s3A.length; index++) {
+                    s3A[index] = s3A[index].replace(/^:/, "")
+                }
+                const s3 = s3A.join(",");
+                result = result.replace(r, `$1.$2(${s3})`)
             } else {
-                result = result.replace(r, `$1.$2()`).replace("(:", "(")
+                result = result.replace(r, `$1.$2()`)
             }
 
         } else {
-            result = result.replace(r, `$1.$2()`).replace("(:", "(")
+            result = result.replace(r, `$1.$2()`)
         }
 
     }
     return result;
 }
 
+function _replaceTypes(line: string): string {
+    const R = /([A-Z]\w+)\s*\*/g;
+    return line.replace(R, '$1');
+}
+
+const BuiltinTypes = {
+    '(?:\\b)int': `int`,
+    '(?:\\b)NSString\\s*\\*?': 'String',
+    '(?:\\b)BOOL': 'bool',
+    '(?:\\b)void': 'void',
+    '(?:\\b)float': 'double',
+    '(?:\\b)NSMutableString\\s*\\*?': 'String',
+    '(?:\\b)id': 'dynamic',
+    '(?:\\b)NSNumber\\s*\\*?': 'num',
+    '(?:\\b)NSArray\\s*\\*?': `List<dynamic>`,
+    '(?:\\b)NSMutableArray\\s*\\*?': `List<dynamic>`,
+    '(?:\\b)NSDictionary\\s*\\*?': `Map`,
+    '(?:\\b)NSMutableDictionary\\s*\\*?': `Map`,
+};
+
+function replaceBuiltinTypes(line: string): string {
+    return Object.entries(BuiltinTypes).reduce((p, [k, v], _) => {
+        const R = new RegExp(k, "g")
+        return p.replace(R, v)
+    }, line);
+}
+
+function dictionaryWithCapacity(line: string): string {
+    const r = /\[\s*NSMutableDictionary\s+dictionaryWithCapacity:(\d+)\s*\]/
+    return line.replace(r, "{} // capacity:$1");
+}
+
+function arrayWithCapacity(line: string): string {
+    const r = /\[\s*NSMutableArray\s+arrayWithCapacity:(\d+)\s*\]/g
+    return line.replace(r, "[] // capacity:$1");
+}
+
+function array_addObject(line: string): string {
+    const r = /\[\s*([^\]]+)\s+addObject:([^\]]+)\s*\]/
+    return line.replace(r, "$1.add($2)");
+}
+
+function array_objectAtIndex(line: string): string {
+    const r = /\[\s*([^\]]+)\s+objectAtIndex:([^\]]+)\s*\]/
+    return line.replace(r, "$1[$2]");
+}
+
+function dict_forKey(line:string):string{
+    const r = /\[\s*([^\]:]+)\s+forKey:([^\]]+)\s*\]/
+    return line.replace(r, "$1[$2]");
+}
+
+function replaceYesNo(line:string):string{
+    return line.replace("YES","true").replace("NO","false");
+}
+
+function replaceDefine(line:string):string{
+    // #define BUFFER_SIZE 1024
+    const r = /^#define\s+([\S]+)\s+(.*)/
+    return line.replace(r,"const $1 = $2;");
+}
+
 export function transform(line: string): string {
-    const funcs: any[] = [_simpleMethodCall, setObject, numberWithInt, stringWithFormat, asString,_callWithArgs];
+    const funcs: any[] = [
+        arrayWithCapacity,
+        array_addObject,
+        array_objectAtIndex,
+        dictionaryWithCapacity,
+        _simpleMethodCall,
+        setObject,
+        numberWithInt,
+        stringWithFormat,
+        asString,
+        _callWithArgs,
+        replaceBuiltinTypes,
+        _replaceTypes,
+        replaceYesNo
+    ];
     // @ts-ignore
     return funcs.reduce((p, func) => func(p), line);
 }
@@ -137,5 +216,28 @@ const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"
 assert(transform(s5) === `root['Store'] = Store.sharedStore().dictionaryValue();`)
 
 assert(transform(`[root setObject:@"无" forKey:@"EventName"];`) === `root['EventName'] = "无";`)
-assert(transform(`[root writeToFile:dataFile atomically:YES];`) === `root.writeToFile(dataFile,atomically:YES);`)
+assert(transform(`[root writeToFile:dataFile atomically:YES];`) === `root.writeToFile(dataFile,atomically:true);`)
 
+const s6 = `NSMutableArray* BFIndexArray = [NSMutableArray arrayWithCapacity:4];`;
+assert(_replaceTypes(s6) === `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`)
+
+const s7 = `NSString* documentDirectory = [path objectAtIndex:0];`
+assert(replaceBuiltinTypes(s7) === `String documentDirectory = [path objectAtIndex:0];`)
+
+const s8 = `[NSMutableDictionary dictionaryWithCapacity:400]`
+assert(dictionaryWithCapacity(s8) === `{} // capacity:400`)
+
+const s9 = `[NSMutableArray arrayWithCapacity:4];`
+assert(arrayWithCapacity(s9) === `[] // capacity:4;`)
+
+const s10 = `[BFIndexArray addObject:info.hero.num];`
+assert(array_addObject(s10) === `BFIndexArray.add(info.hero.num);`)
+
+const s11 = `NSString* documentDirectory = [path objectAtIndex:0];`
+assert(array_objectAtIndex(s11) === `NSString* documentDirectory = path[0];`)
+
+const s12 = `[path forKey:@"1"];`
+assert( dict_forKey(s12) === `path[@"1"];`)
+
+const s13 = `#define BUFFER_SIZE 1024`
+assert(replaceDefine(s13) === `const BUFFER_SIZE = 1024;`)
