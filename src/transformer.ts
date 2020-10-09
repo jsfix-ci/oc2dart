@@ -118,8 +118,9 @@ const BuiltinTypes = {
   '(?:\\b)BOOL': 'bool',
   '(?:\\b)void': 'void',
   '(?:\\b)float': 'double',
+  '(?:\\b)nil': 'null',
   '(?:\\b)NSMutableString\\s*\\*?\\s*': 'String ',
-  '(?:\\b)id': 'dynamic',
+  '(?:\\b)id\\s+(\\w+)': 'dynamic $1',
   '(?:\\b)NSNumber\\s*\\*?\\s*': 'num ',
   '(?:\\b)NSArray\\s*\\*?\\s*': `List<dynamic> `,
   '(?:\\b)NSMutableArray\\s*\\*?\\s*': `List<dynamic> `,
@@ -208,7 +209,8 @@ assert(
     "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
-console.log(transform(s4));
+// tslint:disable-next-line: no-invalid-template-strings
+assert(transform(s4) === "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;");
 
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
 assert(
@@ -253,3 +255,9 @@ assert(dict_forKey(s12) === `path[@"1"];`);
 
 const s13 = `#define BUFFER_SIZE 1024`;
 assert(replaceDefine(s13) === `const BUFFER_SIZE = 1024;`);
+
+const s14 = `id data = name;`
+assert(transform(s14) === `dynamic data = name;`)
+
+const s15 = `return nil;`
+assert(transform(s15) === `return null;`)
