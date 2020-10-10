@@ -210,6 +210,11 @@ function remove_self(line: string): string {
   return line.replace(r, "");
 }
 
+function replace_bundle_path(line:string):string{
+  // NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];
+  const r =/\[\[NSBundle\s+mainBundle\]\s+pathForResource:@"(\w+)" ofType:@"(\w+)"]/
+  return line.replace(r,"'$1.$2'")
+}
 // @ts-ignore
 function remove_release(line: string): string {
   const r = /\[\w+\s+release\]/;
@@ -237,6 +242,7 @@ function initWithDictionary(line: string): string {
 
 export function transform(line: string): string {
   const funcs: any[] = [
+    replace_bundle_path,
     remove_self,
     replace_sort,
     enumerateKeysAndObjectsUsingBlock,
@@ -401,4 +407,7 @@ heros.sort((obj1, obj2) {
 assert(transform(s20) === r20)
 
 const s21 = `[unitsForceUnbattle addObject:[self unitInfoWithNum:num.intValue]];`
-console.log(remove_self(s21))
+assert(remove_self(s21) === `[unitsForceUnbattle addObject:[ unitInfoWithNum:num.intValue]];`)
+
+const s22 = `NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];`
+assert(replace_bundle_path(s22) === `NSString* dataPath = 'MagicData.plist';`)
