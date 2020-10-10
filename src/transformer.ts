@@ -240,8 +240,16 @@ function initWithDictionary(line: string): string {
   return funcs.reduce((p, func) => func(p), line);
 }
 
+function replace_load_dict(line:string):string{
+  // load plist from bundle
+  // NSDictionary* root = [[[NSDictionary alloc] initWithContentsOfFile:dataPath] autorelease];
+  const r = /\[\[\[NSDictionary\s+alloc\]\s+initWithContentsOfFile:(\w+)\]\s+autorelease\]/
+  return line.replace(r,'await loadPlist($1)')
+}
+
 export function transform(line: string): string {
   const funcs: any[] = [
+    replace_load_dict,
     replace_bundle_path,
     remove_self,
     replace_sort,
@@ -411,3 +419,8 @@ assert(remove_self(s21) === `[unitsForceUnbattle addObject:[ unitInfoWithNum:num
 
 const s22 = `NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];`
 assert(replace_bundle_path(s22) === `NSString* dataPath = 'MagicData.plist';`)
+
+const s23 = `NSDictionary* root = [[[NSDictionary alloc] initWithContentsOfFile:dataPath] autorelease];`
+assert(replace_load_dict(s23) === `NSDictionary* root = await loadPlist(dataPath);`)
+
+assert(transform(s23) === `Map root = await loadPlist(dataPath);`)
