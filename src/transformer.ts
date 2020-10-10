@@ -184,10 +184,19 @@ function enumerateKeysAndObjectsUsingBlock(line: string): string {
   return line.replace(start, '$1.forEach(($2, $3) {').replace(end, '}');
 }
 
-function replace_autorelease(line:string):string{
+function replace_autorelease(line: string): string {
   // replace to class factory call
   const r = /\[\[\[([A-Z]\w+)\s+alloc\s*\]\s+init\]\s+autorelease\]/
-  return line.replace(r,'$1()')
+  return line.replace(r, '$1()')
+}
+
+function replace_sort(line: string): string {
+  const start = /\[(\w+)\s+sortUsingComparator:\^NSComparisonResult\(\w+\s+(\w+),\s+\w+\s+(\w+)\)\s*\{.*/;
+  const end = /^\s*\}\s*\]\s*;$/m;
+  const note = `
+  // could be $1.sort(($2, $3) => $2.compareTo($3));
+  `
+  return line.replace(start, `$1.sort(($2, $3) {${note}`).replace(end, '}');
 }
 
 function remove_alloc(line: string): string {
@@ -222,6 +231,7 @@ function initWithDictionary(line: string): string {
 
 export function transform(line: string): string {
   const funcs: any[] = [
+    replace_sort,
     enumerateKeysAndObjectsUsingBlock,
     replace_autorelease,
     initWithDictionary,
@@ -263,13 +273,13 @@ const s4 = `[units setObject:info.dictionaryValue forKey:[NSString stringWithFor
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   setObject(s4) ===
-    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   transform(s4) ===
-    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
@@ -279,23 +289,23 @@ assert(
 
 assert(
   transform(`[root setObject:@"无" forKey:@"EventName"];`) ===
-    `root['EventName'] = "无";`
+  `root['EventName'] = "无";`
 );
 assert(
   transform(`[root writeToFile:dataFile atomically:YES];`) ===
-    `root.writeToFile(dataFile,atomically:true);`
+  `root.writeToFile(dataFile,atomically:true);`
 );
 
 const s6 = `NSMutableArray* BFIndexArray = [NSMutableArray arrayWithCapacity:4];`;
 assert(
   _replaceTypes(s6) ===
-    `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
+  `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
 );
 
 const s7 = `NSString* documentDirectory = [path objectAtIndex:0];`;
 assert(
   replaceBuiltinTypes(s7) ===
-    `String documentDirectory = [path objectAtIndex:0];`
+  `String documentDirectory = [path objectAtIndex:0];`
 );
 
 const s8 = `[NSMutableDictionary dictionaryWithCapacity:400];`;
@@ -346,7 +356,7 @@ assert(transform(s17) === r17);
 
 assert(
   dict_forKey(`sundry.numIcon = [obj objectForKey:@"NumIcon"];`) ===
-    `sundry.numIcon = obj[@"NumIcon"];`
+  `sundry.numIcon = obj[@"NumIcon"];`
 );
 
 const s18 = `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`;
@@ -357,3 +367,28 @@ assert(transform(s18) === `terrainMoveDic = root["Move"];`);
 
 const s19 = `Hero *hero = [[[Hero alloc] init] autorelease];`
 assert(transform(s19) === `Hero hero = Hero();`)
+
+const s20 = `
+[heros sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+  Hero* s1 = obj1;
+  Hero* s2 = obj2;
+  if (s1.num.intValue>s2.num.intValue) {
+      return YES;
+  }
+  return NO;
+}];
+`
+
+const r20 =`
+heros.sort((obj1, obj2) {
+  // could be heros.sort((obj1, obj2) => obj1.compareTo(obj2));
+  
+  Hero s1 = obj1;
+  Hero s2 = obj2;
+  if (s1.num.toInt()>s2.num.toInt()) {
+      return true;
+  }
+  return false;
+}
+`
+assert(transform(s20) === r20)
