@@ -181,7 +181,7 @@ function array_replaceObjectAtIndex(line: string): string {
 function enumerateKeysAndObjectsUsingBlock(line: string): string {
   const start = /\[(\w+)\s+enumerateKeysAndObjectsUsingBlock:\^\(\w+\s+(\w+),\s+\w+\s+(\w+),\s+\w+\s+[\w\*](\w+)\)\s*\{.*/;
   const end = /^\s*\}\s*\]\s*;$/m;
-  return line.replace(start, '$1.forEach(($2, $3) {').replace(end, '}');
+  return line.replace(start, '$1.forEach(($2, $3) {').replace(end, '});');
 }
 
 function replace_autorelease(line: string): string {
@@ -196,7 +196,7 @@ function replace_sort(line: string): string {
   const note = `
   // could be $1.sort(($2, $3) => $2.compareTo($3));
   `
-  return line.replace(start, `$1.sort(($2, $3) {${note}`).replace(end, '}');
+  return line.replace(start, `$1.sort(($2, $3) {${note}`).replace(end, '});');
 }
 
 function remove_alloc(line: string): string {
@@ -350,7 +350,7 @@ terrainMagicsDic.forEach((key, obj) {
   
   List<dynamic> terrainsValue = obj;
   result[magicTypeNum.toInt()] = terrainsValue[num];
-}
+});
 `;
 assert(transform(s17) === r17);
 
@@ -389,6 +389,6 @@ heros.sort((obj1, obj2) {
       return true;
   }
   return false;
-}
+});
 `
 assert(transform(s20) === r20)
