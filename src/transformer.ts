@@ -204,6 +204,12 @@ function remove_alloc(line: string): string {
   return line.replace(r, '');
 }
 
+function remove_self(line: string): string {
+  // independent 
+  const r = /\bself\b/g
+  return line.replace(r, "");
+}
+
 // @ts-ignore
 function remove_release(line: string): string {
   const r = /\[\w+\s+release\]/;
@@ -231,6 +237,7 @@ function initWithDictionary(line: string): string {
 
 export function transform(line: string): string {
   const funcs: any[] = [
+    remove_self,
     replace_sort,
     enumerateKeysAndObjectsUsingBlock,
     replace_autorelease,
@@ -379,7 +386,7 @@ const s20 = `
 }];
 `
 
-const r20 =`
+const r20 = `
 heros.sort((obj1, obj2) {
   // could be heros.sort((obj1, obj2) => obj1.compareTo(obj2));
   
@@ -392,3 +399,6 @@ heros.sort((obj1, obj2) {
 });
 `
 assert(transform(s20) === r20)
+
+const s21 = `[unitsForceUnbattle addObject:[self unitInfoWithNum:num.intValue]];`
+console.log(remove_self(s21))
