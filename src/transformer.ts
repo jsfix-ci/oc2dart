@@ -186,8 +186,8 @@ function enumerateKeysAndObjectsUsingBlock(line: string): string {
 
 function replace_autorelease(line: string): string {
   // replace to class factory call
-  const r = /\[\[\[([A-Z]\w+)\s+alloc\s*\]\s+init\]\s+autorelease\]/
-  return line.replace(r, '$1()')
+  const r = /\[\[\[([A-Z]\w+)\s+alloc\s*\]\s+init\]\s+autorelease\]/;
+  return line.replace(r, '$1()');
 }
 
 function replace_sort(line: string): string {
@@ -195,7 +195,7 @@ function replace_sort(line: string): string {
   const end = /^\s*\}\s*\]\s*;$/m;
   const note = `
   // could be $1.sort(($2, $3) => $2.compareTo($3));
-  `
+  `;
   return line.replace(start, `$1.sort(($2, $3) {${note}`).replace(end, '});');
 }
 
@@ -205,15 +205,15 @@ function remove_alloc(line: string): string {
 }
 
 function remove_self(line: string): string {
-  // independent 
-  const r = /\bself\b/g
-  return line.replace(r, "");
+  // independent
+  const r = /\bself\b/g;
+  return line.replace(r, '');
 }
 
-function replace_bundle_path(line:string):string{
+function replace_bundle_path(line: string): string {
   // NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];
-  const r =/\[\[NSBundle\s+mainBundle\]\s+pathForResource:@"(\w+)" ofType:@"(\w+)"]/
-  return line.replace(r,"'$1.$2'")
+  const r = /\[\[NSBundle\s+mainBundle\]\s+pathForResource:@"(\w+)" ofType:@"(\w+)"]/;
+  return line.replace(r, "'$1.$2'");
 }
 // @ts-ignore
 function remove_release(line: string): string {
@@ -240,11 +240,11 @@ function initWithDictionary(line: string): string {
   return funcs.reduce((p, func) => func(p), line);
 }
 
-function replace_load_dict(line:string):string{
+function replace_load_dict(line: string): string {
   // load plist from bundle
   // NSDictionary* root = [[[NSDictionary alloc] initWithContentsOfFile:dataPath] autorelease];
-  const r = /\[\[\[NSDictionary\s+alloc\]\s+initWithContentsOfFile:(\w+)\]\s+autorelease\]/
-  return line.replace(r,'await loadPlist($1)')
+  const r = /\[\[\[NSDictionary\s+alloc\]\s+initWithContentsOfFile:(\w+)\]\s+autorelease\]/;
+  return line.replace(r, 'await loadPlist($1)');
 }
 
 export function transform(line: string): string {
@@ -294,13 +294,13 @@ const s4 = `[units setObject:info.dictionaryValue forKey:[NSString stringWithFor
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   setObject(s4) ===
-  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   transform(s4) ===
-  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
@@ -310,23 +310,23 @@ assert(
 
 assert(
   transform(`[root setObject:@"无" forKey:@"EventName"];`) ===
-  `root['EventName'] = "无";`
+    `root['EventName'] = "无";`
 );
 assert(
   transform(`[root writeToFile:dataFile atomically:YES];`) ===
-  `root.writeToFile(dataFile,atomically:true);`
+    `root.writeToFile(dataFile,atomically:true);`
 );
 
 const s6 = `NSMutableArray* BFIndexArray = [NSMutableArray arrayWithCapacity:4];`;
 assert(
   _replaceTypes(s6) ===
-  `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
+    `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
 );
 
 const s7 = `NSString* documentDirectory = [path objectAtIndex:0];`;
 assert(
   replaceBuiltinTypes(s7) ===
-  `String documentDirectory = [path objectAtIndex:0];`
+    `String documentDirectory = [path objectAtIndex:0];`
 );
 
 const s8 = `[NSMutableDictionary dictionaryWithCapacity:400];`;
@@ -377,7 +377,7 @@ assert(transform(s17) === r17);
 
 assert(
   dict_forKey(`sundry.numIcon = [obj objectForKey:@"NumIcon"];`) ===
-  `sundry.numIcon = obj[@"NumIcon"];`
+    `sundry.numIcon = obj[@"NumIcon"];`
 );
 
 const s18 = `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`;
@@ -386,8 +386,8 @@ assert(
 );
 assert(transform(s18) === `terrainMoveDic = root["Move"];`);
 
-const s19 = `Hero *hero = [[[Hero alloc] init] autorelease];`
-assert(transform(s19) === `Hero hero = Hero();`)
+const s19 = `Hero *hero = [[[Hero alloc] init] autorelease];`;
+assert(transform(s19) === `Hero hero = Hero();`);
 
 const s20 = `
 [heros sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
@@ -398,7 +398,7 @@ const s20 = `
   }
   return NO;
 }];
-`
+`;
 
 const r20 = `
 heros.sort((obj1, obj2) {
@@ -411,16 +411,21 @@ heros.sort((obj1, obj2) {
   }
   return false;
 });
-`
-assert(transform(s20) === r20)
+`;
+assert(transform(s20) === r20);
 
-const s21 = `[unitsForceUnbattle addObject:[self unitInfoWithNum:num.intValue]];`
-assert(remove_self(s21) === `[unitsForceUnbattle addObject:[ unitInfoWithNum:num.intValue]];`)
+const s21 = `[unitsForceUnbattle addObject:[self unitInfoWithNum:num.intValue]];`;
+assert(
+  remove_self(s21) ===
+    `[unitsForceUnbattle addObject:[ unitInfoWithNum:num.intValue]];`
+);
 
-const s22 = `NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];`
-assert(replace_bundle_path(s22) === `NSString* dataPath = 'MagicData.plist';`)
+const s22 = `NSString* dataPath = [[NSBundle mainBundle] pathForResource:@"MagicData" ofType:@"plist"];`;
+assert(replace_bundle_path(s22) === `NSString* dataPath = 'MagicData.plist';`);
 
-const s23 = `NSDictionary* root = [[[NSDictionary alloc] initWithContentsOfFile:dataPath] autorelease];`
-assert(replace_load_dict(s23) === `NSDictionary* root = await loadPlist(dataPath);`)
+const s23 = `NSDictionary* root = [[[NSDictionary alloc] initWithContentsOfFile:dataPath] autorelease];`;
+assert(
+  replace_load_dict(s23) === `NSDictionary* root = await loadPlist(dataPath);`
+);
 
-assert(transform(s23) === `Map root = await loadPlist(dataPath);`)
+assert(transform(s23) === `Map root = await loadPlist(dataPath);`);
