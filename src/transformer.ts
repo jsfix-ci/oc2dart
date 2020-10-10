@@ -170,10 +170,24 @@ function replaceDefine(line: string): string {
   return line.replace(r, 'const $1 = $2;');
 }
 
+function array_replaceObjectAtIndex(line:string):string{
+  const r = /\[\s*([^\]]+)\s+replaceObjectAtIndex:([^\]]+)\s+withObject:(.*)\s*\]/;
+  return line.replace(r, '$1[$2] = $3');
+}
+
+// high priority
+function enumerateKeysAndObjectsUsingBlock(line:string):string{
+  const start = /\[(\w+)\s+enumerateKeysAndObjectsUsingBlock:\^\(\w+\s+(\w+),\s+\w+\s+(\w+),\s+\w+\s+[\w\*](\w+)\)\s*\{.*/
+  const end = /^\s*\}\s*\]\s*;$/m
+  return line.replace(start, '$1.forEach(($2, $3) {').replace(end,"}");
+}
+
 export function transform(line: string): string {
   const funcs: any[] = [
+    enumerateKeysAndObjectsUsingBlock,
     arrayWithCapacity,
     array_addObject,
+    array_replaceObjectAtIndex,
     array_objectAtIndex,
     dictionaryWithCapacity,
     _simpleMethodCall,
@@ -210,7 +224,10 @@ assert(
 );
 
 // tslint:disable-next-line: no-invalid-template-strings
-assert(transform(s4) === "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;");
+assert(
+  transform(s4) ===
+    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+);
 
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
 assert(
@@ -256,8 +273,30 @@ assert(dict_forKey(s12) === `path[@"1"];`);
 const s13 = `#define BUFFER_SIZE 1024`;
 assert(replaceDefine(s13) === `const BUFFER_SIZE = 1024;`);
 
-const s14 = `id data = name;`
-assert(transform(s14) === `dynamic data = name;`)
+const s14 = `id data = name;`;
+assert(transform(s14) === `dynamic data = name;`);
 
-const s15 = `return nil;`
-assert(transform(s15) === `return null;`)
+const s15 = `return nil;`;
+assert(transform(s15) === `return null;`);
+
+const s16 = `[result replaceObjectAtIndex:magicTypeNum.intValue withObject:[terrainsValue objectAtIndex:num]];`
+
+assert(transform(s16) === `result[magicTypeNum.toInt()] = terrainsValue[num];`);
+
+const s17 = `
+[terrainMagicsDic enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+  NSString* magicTypeNum = key;
+  
+  NSArray* terrainsValue = obj;
+  [result replaceObjectAtIndex:magicTypeNum.intValue withObject:[terrainsValue objectAtIndex:num]];
+}];
+`
+const r17 = `
+terrainMagicsDic.forEach((key, obj) {
+  String magicTypeNum = key;
+  
+  List<dynamic> terrainsValue = obj;
+  result[magicTypeNum.toInt()] = terrainsValue[num];
+}
+`
+assert(transform(s17) === r17);
