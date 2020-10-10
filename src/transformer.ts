@@ -155,9 +155,12 @@ function array_objectAtIndex(line: string): string {
   return line.replace(r, '$1[$2]');
 }
 
+
 function dict_forKey(line: string): string {
+  // take NSDictionary value or object by key
   const r = /\[\s*([^\]:]+)\s+forKey:([^\]]+)\s*\]/;
-  return line.replace(r, '$1[$2]');
+  const r2 = /\[\s*([^\]:]+)\s+objectForKey:([^\]]+)\s*\]/;
+  return line.replace(r, '$1[$2]').replace(r2,'$1[$2]');
 }
 
 function replaceYesNo(line: string): string {
@@ -182,14 +185,37 @@ function enumerateKeysAndObjectsUsingBlock(line:string):string{
   return line.replace(start, '$1.forEach(($2, $3) {').replace(end,"}");
 }
 
+function remove_alloc(line:string):string{
+  const r = /\[NSDictionary\s+alloc\]/
+  return line.replace(r,'');
+}
+
+function _initWithDictionary(line:string):string{
+  const r = /\[\s*initWithDictionary:(.*)\s+copyItems:(.*)\]/
+  return line.replace(r,'$1');
+}
+
+// high priority
+function initWithDictionary(line:string):string{
+  // `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`
+  const funcs: any[] = [
+    remove_alloc,
+    _initWithDictionary
+  ];
+  // @ts-ignore
+  return funcs.reduce((p, func) => func(p), line);
+}
+
 export function transform(line: string): string {
   const funcs: any[] = [
     enumerateKeysAndObjectsUsingBlock,
+    initWithDictionary,
     arrayWithCapacity,
     array_addObject,
     array_replaceObjectAtIndex,
     array_objectAtIndex,
     dictionaryWithCapacity,
+    dict_forKey,
     _simpleMethodCall,
     setObject,
     numberWithInt,
@@ -300,3 +326,9 @@ terrainMagicsDic.forEach((key, obj) {
 }
 `
 assert(transform(s17) === r17);
+
+assert(dict_forKey(`sundry.numIcon = [obj objectForKey:@"NumIcon"];`) === `sundry.numIcon = obj[@"NumIcon"];`)
+
+const s18 = `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`
+assert( initWithDictionary(s18) === `terrainMoveDic = [root objectForKey:@"Move"];`)
+assert(transform(s18) === `terrainMoveDic = root["Move"];`)
