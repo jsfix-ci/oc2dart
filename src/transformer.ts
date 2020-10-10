@@ -160,7 +160,7 @@ function dict_forKey(line: string): string {
   // take NSDictionary value or object by key
   const r = /\[\s*([^\]:]+)\s+forKey:([^\]]+)\s*\]/;
   const r2 = /\[\s*([^\]:]+)\s+objectForKey:([^\]]+)\s*\]/;
-  return line.replace(r, '$1[$2]').replace(r2,'$1[$2]');
+  return line.replace(r, '$1[$2]').replace(r2, '$1[$2]');
 }
 
 function replaceYesNo(line: string): string {
@@ -173,30 +173,42 @@ function replaceDefine(line: string): string {
   return line.replace(r, 'const $1 = $2;');
 }
 
-function array_replaceObjectAtIndex(line:string):string{
+function array_replaceObjectAtIndex(line: string): string {
   const r = /\[\s*([^\]]+)\s+replaceObjectAtIndex:([^\]]+)\s+withObject:(.*)\s*\]/;
   return line.replace(r, '$1[$2] = $3');
 }
 
 // high priority
-function enumerateKeysAndObjectsUsingBlock(line:string):string{
+function enumerateKeysAndObjectsUsingBlock(line: string): string {
   const start = /\[(\w+)\s+enumerateKeysAndObjectsUsingBlock:\^\(\w+\s+(\w+),\s+\w+\s+(\w+),\s+\w+\s+[\w\*](\w+)\)\s*\{.*/
   const end = /^\s*\}\s*\]\s*;$/m
-  return line.replace(start, '$1.forEach(($2, $3) {').replace(end,"}");
+  return line.replace(start, '$1.forEach(($2, $3) {').replace(end, "}");
 }
 
-function remove_alloc(line:string):string{
-  const r = /\[NSDictionary\s+alloc\]/
-  return line.replace(r,'');
+function remove_alloc(line: string): string {
+  const r = /\[[A-Z]\w+\s+alloc\]/
+  return line.replace(r, '');
 }
 
-function _initWithDictionary(line:string):string{
+// @ts-ignore
+function remove_release(line: string): string {
+  const r = /\[\w+\s+release\]/
+  return line.replace(r, '');
+}
+
+// @ts-ignore
+function remove_dealloc(line: string): string {
+  const r = /\[\w+\s+dealloc\]/
+  return line.replace(r, '');
+}
+
+function _initWithDictionary(line: string): string {
   const r = /\[\s*initWithDictionary:(.*)\s+copyItems:(.*)\]/
-  return line.replace(r,'$1');
+  return line.replace(r, '$1');
 }
 
 // high priority
-function initWithDictionary(line:string):string{
+function initWithDictionary(line: string): string {
   // `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`
   const funcs: any[] = [
     remove_alloc,
@@ -225,6 +237,8 @@ export function transform(line: string): string {
     replaceBuiltinTypes,
     _replaceTypes,
     replaceYesNo,
+    // remove_release,
+    // remove_dealloc
   ];
   // @ts-ignore
   return funcs.reduce((p, func) => func(p), line);
@@ -246,13 +260,13 @@ const s4 = `[units setObject:info.dictionaryValue forKey:[NSString stringWithFor
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   setObject(s4) ===
-    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 // tslint:disable-next-line: no-invalid-template-strings
 assert(
   transform(s4) ===
-    "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
+  "units['Unit${info.hero.num.toInt()}'] = info.dictionaryValue;"
 );
 
 const s5 = `[root setObject:[[Store sharedStore] dictionaryValue] forKey:"Store"];`;
@@ -262,23 +276,23 @@ assert(
 
 assert(
   transform(`[root setObject:@"无" forKey:@"EventName"];`) ===
-    `root['EventName'] = "无";`
+  `root['EventName'] = "无";`
 );
 assert(
   transform(`[root writeToFile:dataFile atomically:YES];`) ===
-    `root.writeToFile(dataFile,atomically:true);`
+  `root.writeToFile(dataFile,atomically:true);`
 );
 
 const s6 = `NSMutableArray* BFIndexArray = [NSMutableArray arrayWithCapacity:4];`;
 assert(
   _replaceTypes(s6) ===
-    `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
+  `NSMutableArray BFIndexArray = [NSMutableArray arrayWithCapacity:4];`
 );
 
 const s7 = `NSString* documentDirectory = [path objectAtIndex:0];`;
 assert(
   replaceBuiltinTypes(s7) ===
-    `String documentDirectory = [path objectAtIndex:0];`
+  `String documentDirectory = [path objectAtIndex:0];`
 );
 
 const s8 = `[NSMutableDictionary dictionaryWithCapacity:400];`;
@@ -330,5 +344,5 @@ assert(transform(s17) === r17);
 assert(dict_forKey(`sundry.numIcon = [obj objectForKey:@"NumIcon"];`) === `sundry.numIcon = obj[@"NumIcon"];`)
 
 const s18 = `terrainMoveDic = [[NSDictionary alloc] initWithDictionary:[root objectForKey:@"Move"] copyItems:YES];`
-assert( initWithDictionary(s18) === `terrainMoveDic = [root objectForKey:@"Move"];`)
+assert(initWithDictionary(s18) === `terrainMoveDic = [root objectForKey:@"Move"];`)
 assert(transform(s18) === `terrainMoveDic = root["Move"];`)
